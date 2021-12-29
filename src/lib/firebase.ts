@@ -16,9 +16,6 @@ if (!firebase.apps.length) {
 }
 
 export const analytics = () => {
-  if (typeof window !== 'undefined') {
-    return firebase.analytics();
-  }
   return null;
 };
 export default firebase;

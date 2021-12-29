@@ -34,6 +34,7 @@ const getVersesParams = (
     reciter: getAudioPlayerStateInitialState(currentLocale).reciter.id,
     wordTranslationLanguage:
       getReadingPreferencesInitialState(currentLocale).selectedWordByWordLocale,
+    perPage: 'all', // will fetch all verses
   },
   ...params,
 });

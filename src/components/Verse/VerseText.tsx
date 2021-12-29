@@ -1,16 +1,13 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 
 import classNames from 'classnames';
 import { shallowEqual, useSelector } from 'react-redux';
-
-import { QURAN_READER_OBSERVER_ID } from '../QuranReader/observer';
 
 import isCenterAlignedPage from './pageUtils';
 import styles from './VerseText.module.scss';
 
 import ChapterHeader from 'src/components/chapters/ChapterHeader';
 import QuranWord from 'src/components/dls/QuranWord/QuranWord';
-import useIntersectionObserver from 'src/hooks/useObserveElement';
 import { selectLoadedFontFaces } from 'src/redux/slices/QuranReader/font-faces';
 import { selectWordByWordByWordPreferences } from 'src/redux/slices/QuranReader/readingPreferences';
 import { selectQuranReaderStyles } from 'src/redux/slices/QuranReader/styles';
@@ -33,9 +30,7 @@ const VerseText = ({
   isHighlighted,
   shouldShowH1ForSEO = false,
 }: VerseTextProps) => {
-  const textRef = useRef(null);
   const loadedFonts = useSelector(selectLoadedFontFaces);
-  useIntersectionObserver(textRef, QURAN_READER_OBSERVER_ID);
   const { quranFont, quranTextFontScale } = useSelector(
     selectQuranReaderStyles,
     shallowEqual,
@@ -47,7 +42,7 @@ const VerseText = ({
     }
     return loadedFonts.includes(`p${firstWord.pageNumber}-${quranFont.replace('code_', '')}`);
   }, [firstWord.pageNumber, loadedFonts, quranFont]);
-  const { lineNumber, pageNumber, location, verseKey, hizbNumber } = firstWord;
+  const { lineNumber, pageNumber, location } = firstWord;
   const { showWordByWordTranslation, showWordByWordTransliteration } = useSelector(
     selectWordByWordByWordPreferences,
     shallowEqual,
@@ -70,15 +65,10 @@ const VerseText = ({
     <>
       {isReadingMode && isFirstWordOfSurah && (
         <div className={styles.chapterHeaderContainer}>
-          <ChapterHeader chapterId={chapterId} pageNumber={pageNumber} hizbNumber={hizbNumber} />
+          <ChapterHeader chapterId={chapterId} />
         </div>
       )}
       <VerseTextContainer
-        ref={textRef}
-        data-verse-key={verseKey}
-        data-page={pageNumber}
-        data-chapter-id={chapterId}
-        data-hizb={hizbNumber}
         className={classNames(styles.verseTextContainer, {
           [styles.largeQuranTextLayoutContainer]: isBigTextLayout,
           [styles.highlighted]: isHighlighted,

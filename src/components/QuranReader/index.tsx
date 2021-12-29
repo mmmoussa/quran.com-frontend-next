@@ -1,28 +1,24 @@
 /* eslint-disable react/no-multi-comp */
 /* eslint-disable max-lines */
-import React, { useCallback } from 'react';
+import React from 'react';
 
 import classNames from 'classnames';
 import useTranslation from 'next-translate/useTranslation';
 import dynamic from 'next/dynamic';
-import InfiniteScroll from 'react-infinite-scroller';
-import { shallowEqual, useDispatch, useSelector } from 'react-redux';
+import { shallowEqual, useSelector } from 'react-redux';
 import useSWRInfinite from 'swr/infinite';
 
 import { getPageLimit, getRequestKey, verseFetcher } from './api';
 import ContextMenu from './ContextMenu';
 import DebuggingObserverWindow from './DebuggingObserverWindow';
-import Loader from './Loader';
 import Loading from './Loading';
 import Notes from './Notes/Notes';
-import { getObservedVersePayload, getOptions, QURAN_READER_OBSERVER_ID } from './observer';
 import onCopyQuranWords from './onCopyQuranWords';
 import styles from './QuranReader.module.scss';
 import QuranReaderBody from './QuranReaderBody';
 import SidebarNavigation from './SidebarNavigation/SidebarNavigation';
 
 import Spinner from 'src/components/dls/Spinner/Spinner';
-import useGlobalIntersectionObserver from 'src/hooks/useGlobalIntersectionObserver';
 import Error from 'src/pages/_error';
 import { selectIsUsingDefaultReciter, selectReciter } from 'src/redux/slices/AudioPlayer/state';
 import { selectNotes } from 'src/redux/slices/QuranReader/notes';
@@ -31,7 +27,6 @@ import {
   selectReadingPreference,
   selectWordByWordLocale,
 } from 'src/redux/slices/QuranReader/readingPreferences';
-import { setLastReadVerse } from 'src/redux/slices/QuranReader/readingTracker';
 import { selectIsSidebarNavigationVisible } from 'src/redux/slices/QuranReader/sidebarNavigation';
 import { selectQuranReaderStyles } from 'src/redux/slices/QuranReader/styles';
 import {
@@ -57,7 +52,6 @@ type QuranReaderProps = {
   quranReaderDataType?: QuranReaderDataType;
 };
 
-const INFINITE_SCROLLER_THRESHOLD = 2000; // Number of pixels before the sentinel reaches the viewport to trigger loadMore()
 const QuranReader = ({
   initialData,
   id,
@@ -78,7 +72,7 @@ const QuranReader = ({
   const reciter = useSelector(selectReciter, shallowEqual);
   const isUsingDefaultReciter = useSelector(selectIsUsingDefaultReciter);
   const isSidebarNavigationVisible = useSelector(selectIsSidebarNavigationVisible);
-  const { data, size, setSize, isValidating } = useSWRInfinite(
+  const { data, size, isValidating } = useSWRInfinite(
     (index) =>
       getRequestKey({
         quranReaderDataType,
@@ -109,23 +103,9 @@ const QuranReader = ({
       revalidateOnMount: true, // enable automatic revalidation when component is mounted. This is needed when the translations inside initialData don't match with the user preferences and would result in inconsistency either when we first load the QuranReader with pre-saved translations from the persistent store or when we change the translations' preferences after initial load.
     },
   );
-  const dispatch = useDispatch();
   const readingPreference = useSelector(selectReadingPreference) as ReadingPreference;
   const isReadingPreference = readingPreference === ReadingPreference.Reading;
-  const onElementVisible = useCallback(
-    (element: Element) => {
-      dispatch({
-        type: setLastReadVerse.type,
-        payload: getObservedVersePayload(element),
-      });
-    },
-    [dispatch],
-  );
-  useGlobalIntersectionObserver(
-    getOptions(isReadingPreference),
-    onElementVisible,
-    QURAN_READER_OBSERVER_ID,
-  );
+
   // if we are fetching the data (this will only happen when the user has changed the default translations/tafsirs so the initialData will be set to null).
   if (!data) {
     return (
@@ -140,11 +120,7 @@ const QuranReader = ({
   if (!verses.length) {
     return <Error />;
   }
-  const loadMore = () => {
-    if (!isValidating) {
-      setSize(size + 1);
-    }
-  };
+
   const hasMore =
     size < getPageLimit(isVerseData, isTafsirData || isSelectedTafsirData, initialData);
   return (
@@ -159,25 +135,13 @@ const QuranReader = ({
         })}
       >
         <div className={styles.infiniteScroll}>
-          <InfiniteScroll
-            initialLoad={false}
-            threshold={INFINITE_SCROLLER_THRESHOLD}
-            hasMore={hasMore}
-            loadMore={loadMore}
-            loader={
-              <div key={0}>
-                <Loader isValidating={isValidating} loadMore={loadMore} />
-              </div>
-            }
-          >
-            <QuranReaderBody
-              isTafsirData={isTafsirData}
-              isSelectedTafsirData={isSelectedTafsirData}
-              isReadingPreference={isReadingPreference}
-              quranReaderStyles={quranReaderStyles}
-              verses={verses}
-            />
-          </InfiniteScroll>
+          <QuranReaderBody
+            isTafsirData={isTafsirData}
+            isSelectedTafsirData={isSelectedTafsirData}
+            isReadingPreference={isReadingPreference}
+            quranReaderStyles={quranReaderStyles}
+            verses={verses}
+          />
           {!hasMore && !isValidating && (
             <EndOfScrollingControls
               quranReaderDataType={quranReaderDataType}

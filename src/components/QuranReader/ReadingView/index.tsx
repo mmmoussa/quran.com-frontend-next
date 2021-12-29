@@ -1,4 +1,7 @@
-import React, { useMemo, memo } from 'react';
+import React, { useRef, useMemo, memo } from 'react';
+
+import { useDispatch } from 'react-redux';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 
 import { verseFontChanged } from '../utils/memoization';
 
@@ -6,6 +9,7 @@ import groupPagesByVerses from './groupPagesByVerses';
 import Page from './Page';
 import styles from './ReadingView.module.scss';
 
+import { setLastReadVerse } from 'src/redux/slices/QuranReader/readingTracker';
 import QuranReaderStyles from 'src/redux/types/QuranReaderStyles';
 import Verse from 'types/Verse';
 
@@ -16,18 +20,44 @@ type ReadingViewProps = {
 
 const ReadingView = ({ verses, quranReaderStyles }: ReadingViewProps) => {
   const pages = useMemo(() => groupPagesByVerses(verses), [verses]);
-
+  const pageNumbers = Object.keys(pages);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const dispatch = useDispatch();
   return (
     <div className={styles.container}>
-      {Object.keys(pages).map((pageNumber, index) => (
-        <Page
-          verses={pages[pageNumber]}
-          key={`page-${pageNumber}`}
-          page={Number(pageNumber)}
-          quranReaderStyles={quranReaderStyles}
-          pageIndex={index}
-        />
-      ))}
+      <Virtuoso
+        ref={virtuosoRef}
+        useWindowScroll
+        overscan={1}
+        style={{ width: 'auto' }}
+        rangeChanged={(range) => {
+          const pageNumber = pageNumbers[range.startIndex];
+          const firstVisibleVerse = pages[pageNumber][0];
+          dispatch({
+            type: setLastReadVerse.type,
+            payload: {
+              verseKey: firstVisibleVerse.verseKey,
+              chapterId: firstVisibleVerse.chapterId,
+              page: firstVisibleVerse.pageNumber,
+              hizb: firstVisibleVerse.hizbNumber,
+            },
+          });
+        }}
+        initialItemCount={3} // needed for SSR
+        totalCount={pageNumbers.length}
+        itemContent={(index) => {
+          const pageNumber = pageNumbers[index];
+          return (
+            <Page
+              verses={pages[pageNumber]}
+              key={`page-${pageNumber}`}
+              page={Number(pageNumber)}
+              quranReaderStyles={quranReaderStyles}
+              pageIndex={index}
+            />
+          );
+        }}
+      />
     </div>
   );
 };
